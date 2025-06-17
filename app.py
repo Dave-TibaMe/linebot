@@ -1,12 +1,8 @@
+import os
 from flask import Flask, request, abort
 
-
-from linebot.v3 import (
-    WebhookHandler
-)
-from linebot.v3.exceptions import (
-    InvalidSignatureError
-)
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
     ApiClient,
@@ -19,32 +15,29 @@ from linebot.v3.webhooks import (
     TextMessageContent
 )
 
+# 讀取環境變數
+from dotenv import load_dotenv
+load_dotenv()
+
 app = Flask(__name__)
 
+# 從 .env 環境變數中取得 token / secret
 configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
-#configuration = Configuration(access_token='6Dthjwqhy25X79MTB2Du6zO5qN49FKHW0Yyl4wlxMX8qFtj3qjcDaNUKSMlF9cmsM0xTatUHgNKQz9dX9UUaPPF4oDGTDwcKEOTdL5dfYruTxX41Qw43UxjdgsnJ7qK6deUtOsBrWhjCMaq+F1eVZwdB04t89/1O/w1cDnyilFU=')
-#handler = WebhookHandler('a39aa2d4b1d43d1cb49134ef3771d0ab')
-
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
-
-    # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
 
-    # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.info("Invalid signature. Please check your channel access token/channel secret.")
+        app.logger.warning("Invalid signature.")
         abort(400)
 
     return 'OK'
-
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -53,10 +46,10 @@ def handle_message(event):
         line_bot_api.reply_message_with_http_info(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                #messages=[TextMessage(text=event.message.text)]
                 messages=[TextMessage(text="linebot testing")]
             )
         )
 
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 5000))  # Render 用 PORT，預設 5000
+    app.run(host="0.0.0.0", port=port)
