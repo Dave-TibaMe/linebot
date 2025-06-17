@@ -19,12 +19,6 @@ from linebot.v3.webhooks import (
     TextMessageContent
 )
 
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
 app = Flask(__name__)
 
 configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
