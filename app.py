@@ -225,7 +225,7 @@ def handle_message(event):
                     logging.error(f"下載後圖片內容為空，訊息 ID: {message_id}")
                     # api.reply_message_with_http_info(...)
 
-            except LineBotApiError  as e:
+            except ApiException as e:
                 logging.error(f"LINE API 操作失敗 (圖片處理: {message_id}): {e.status} {e.reason} {e.body}", exc_info=True)
                 # 根據錯誤類型決定是否回覆
                 # if e.status == 401: # Unauthorized
