@@ -17,7 +17,7 @@ from linebot.v3.webhooks import (
     TextMessageContent
 )
 
-from linebot.v3.webhooks import ImageMessageContent, VideoMessageContent
+from linebot.v3.messaging import PushMessageRequest, ImageMessage, VideoMessage
 
 # 讀取環境變數
 from dotenv import load_dotenv
@@ -58,8 +58,8 @@ def callback():
 
     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessageContent)
 
+@handler.add(MessageEvent)
 def handle_message(event):
     if event.source.type != "group" or event.source.group_id != GROUP_A:
         return
@@ -69,25 +69,42 @@ def handle_message(event):
 
         if isinstance(event.message, TextMessageContent):
             text = f"[來自 A 群組] {event.message.text}"
-            api.push_message(to=GROUP_B, messages=[TextMessage(text=text)])
+            api.push_message_with_http_info(
+                PushMessageRequest(
+                    to=GROUP_B,
+                    messages=[TextMessage(text=text)]
+                )
+            )
 
         elif isinstance(event.message, ImageMessageContent):
             content = api.get_message_content(message_id=event.message.id).read()
             url = upload_to_imgur(content)
             if url:
-                api.push_message(to=GROUP_B, messages=[
-                    ImageMessage(original_content_url=url, preview_image_url=url),
-                    TextMessage(text="[來自 A 群組 – 圖片]")
-                ])
+                image_msg = ImageMessage(
+                    original_content_url=url,
+                    preview_image_url=url
+                )
+                api.push_message_with_http_info(
+                    PushMessageRequest(
+                        to=GROUP_B,
+                        messages=[image_msg, TextMessage(text="[來自 A 群組 – 圖片]")]
+                    )
+                )
 
         elif isinstance(event.message, VideoMessageContent):
             content = api.get_message_content(message_id=event.message.id).read()
             url = upload_to_imgur(content)
             if url:
-                api.push_message(to=GROUP_B, messages=[
-                    VideoMessage(original_content_url=url, preview_image_url=url),
-                    TextMessage(text="[來自 A 群組 – 影片]")
-                ])
+                video_msg = VideoMessage(
+                    original_content_url=url,
+                    preview_image_url=url
+                )
+                api.push_message_with_http_info(
+                    PushMessageRequest(
+                        to=GROUP_B,
+                        messages=[video_msg, TextMessage(text="[來自 A 群組 – 影片]")]
+                    )
+                )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render 用 PORT，預設 5000
