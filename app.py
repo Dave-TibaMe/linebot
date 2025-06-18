@@ -68,16 +68,12 @@ def upload_to_imgur(img_bytes, max_retries=5):
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers.get('X-Line-Signature', '')
-    body = request.get_data(as_text=False)  # 建議用 as_text=False 或 request.data
-    app.logger.info("Request body: " + body.decode('utf-8', errors='replace'))
-
+    signature = request.headers['X-Line-Signature']
+    body = request.get_data(as_text=True)
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.warning("Invalid signature.")
-        abort(400)
-
+        return "Invalid signature", 400
     return 'OK'
 
 
