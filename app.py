@@ -109,11 +109,10 @@ def handle_message(event):
                 url = upload_to_imgur(content)
 
                 #test
-                text1 = url
                 api.push_message_with_http_info(
                     PushMessageRequest(
                         to=GROUP_B,
-                        messages=[TextMessage(text=text1)]
+                        messages=[TextMessage(text=f"url：{url}")]
                     )
                 )
 
