@@ -131,31 +131,83 @@ def handle_message(event):
             filepath = None # 初始化檔案路徑變數，用於 finally 中的刪除
             
             try:
-                # --- 使用 MessagingApi 的 get_message_content 方法 ---
-                # 這個方法返回一個 file-like object (bytes stream)
-                message_content_stream = line_bot_api.get_message_content(message_id=message_id) # 或者 api.get_message_content(...)
+                message_content_stream = line_bot_api.get_message_content(message_id=message_id)
     
-                file_name = f"{message_id}.jpg" # 假設是 jpg
-                file_path = os.path.join(TEMP_IMAGE_DIR_NAME, file_name)
+                # 使用 UUID 生成更獨特的檔案名稱，避免潛在衝突，並保留原始副檔名 (如果 LINE 提供)
+                # 但由於 LINE 的 message_id 已經很獨特，直接用 message_id 作為檔名主體通常也可以
+                # 這裡我們簡單假設都是 .jpg，如果 LINE Content API 返回的 Content-Type 更精確，可以從那裡獲取
+                file_ext = ".jpg" # 預設為 .jpg
+                # content_type = message_content_stream.headers.get('Content-Type') # 理論上可以這樣獲取，但 get_message_content 返回的是 stream，不是 response 物件
+                # if content_type:
+                #     ext = mimetypes.guess_extension(content_type)
+                #     if ext:
+                #         file_ext = ext
+                
+                file_name = f"{message_id}{file_ext}"
+                
+                # --- 修改：使用 TEMP_IMAGE_DIR_PATH 組裝完整檔案路徑 ---
+                file_path = os.path.join(TEMP_IMAGE_DIR_PATH, file_name)
     
                 with open(file_path, 'wb') as fd:
-                    for chunk in message_content_stream: # 迭代讀取 stream 中的數據塊
+                    for chunk in message_content_stream:
                         fd.write(chunk)
-                # 或者，如果內容不大，可以一次性讀取 (但不推薦用於大檔案)
-                # content_bytes = message_content_stream.read()
-                # with open(file_path, 'wb') as fd:
-                #     fd.write(content_bytes)
-    
                 logging.info(f"圖片已儲存: {file_path}")
     
-                # ... 接下來您可以處理儲存下來的圖片 file_path ...
+                # --- 新增：轉發圖片到 GROUP_B_ID ---
+                public_image_url = f"{APP_BASE_URL.rstrip('/')}/{TEMP_IMAGE_DIR_NAME}/{file_name}"
+                logging.info(f"準備轉發圖片，公開 URL: {public_image_url}")
+
+                image_to_send = ImageMessage(
+                    original_content_url=public_image_url,
+                    preview_image_url=public_image_url # 對於 LINE，原圖和預覽圖通常可以是同一個 URL
+                )
+                
+                messages_to_send = []
+                if group_a_display_name:
+                    messages_to_send.append(TextMessage(text=group_a_display_name))
+                messages_to_send.append(image_to_send)
+
+                line_bot_api.push_message_with_http_info(
+                    PushMessageRequest(
+                        to=GROUP_B_ID,
+                        messages=messages_to_send
+                    )
+                )
+                logging.info(f"圖片訊息已成功轉發至 {GROUP_B_ID}")
+                # --- 轉發邏輯結束 ---
     
-            except ApiException as e: # 捕獲來自 MessagingApi 的錯誤
-                logging.error(f"獲取圖片內容時發生 LINE API 錯誤: status={e.status}, reason={e.reason}, body={e.body}")
-                # 根據需要處理錯誤，例如回覆錯誤訊息給用戶
+            except ApiException as e:
+                error_message = f"處理圖片訊息 {message_id} 時發生 LINE API 錯誤: status={e.status}, reason={e.reason}, body={e.body}"
+                logging.error(error_message)
+                try:
+                    line_bot_api.push_message_with_http_info(
+                        PushMessageRequest(
+                            to=event.source.group_id, # 通知來源群組
+                            messages=[TextMessage(text=f"[系統通知] 轉發圖片失敗 ({e.status})。")]
+                        )
+                    )
+                except Exception as notify_err:
+                    logging.error(f"發送圖片處理失敗通知失敗: {notify_err}")
             except Exception as e:
-                logging.error(f"處理圖片訊息 {message_id} 時發生未預期錯誤: {e}", exc_info=True)
-                # 根據需要處理錯誤
+                error_message = f"處理圖片訊息 {message_id} 時發生未預期錯誤: {e}"
+                logging.error(error_message, exc_info=True)
+                try:
+                    line_bot_api.push_message_with_http_info(
+                        PushMessageRequest(
+                            to=event.source.group_id, # 通知來源群組
+                            messages=[TextMessage(text="[系統通知] 轉發圖片時發生內部錯誤。")]
+                        )
+                    )
+                except Exception as notify_err:
+                    logging.error(f"發送圖片處理內部錯誤通知失敗: {notify_err}")
+            finally:
+                # 可選：在這裡添加刪除臨時圖片的邏輯，以節省空間
+                if file_path and os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                        logging.info(f"已刪除臨時圖片: {file_path}")
+                    except OSError as e_remove:
+                        logging.error(f"刪除臨時圖片 {file_path} 失敗: {e_remove}")
 
         elif isinstance(event.message, VideoMessageContent):
             message_id = event.message.id
