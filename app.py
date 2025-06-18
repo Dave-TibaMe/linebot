@@ -1,4 +1,6 @@
 import os
+import requests
+
 from flask import Flask, request, abort
 
 from linebot.v3 import WebhookHandler
@@ -14,6 +16,8 @@ from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent
 )
+
+from linebot.v3.webhooks import ImageMessageContent, VideoMessageContent
 
 # 讀取環境變數
 from dotenv import load_dotenv
@@ -60,7 +64,7 @@ def handle_message(event):
     if event.source.type != "group" or event.source.group_id != GROUP_A:
         return
 
-    with ApiClient(cfg) as api_client:
+    with ApiClient(configuration) as api_client:
         api = MessagingApi(api_client)
 
         if isinstance(event.message, TextMessageContent):
