@@ -89,8 +89,7 @@ def handle_message(event):
                 messages=[TextMessage(text=text)]
             )
         )
-        return
-
+"""
         if isinstance(event.message, TextMessageContent):
             text = event.source.group_id #f"[{GROUP_A_NAME}] {event.message.text}"
             api.push_message_with_http_info(
@@ -146,6 +145,7 @@ def handle_message(event):
                         )
                     )
 
+"""
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render 用 PORT，預設 5000
