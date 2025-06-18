@@ -103,7 +103,7 @@ def handle_message(event):
                 api.push_message_with_http_info(
                     PushMessageRequest(
                         to=GROUP_B,
-                        messages=[video_msg, TextMessage(text="[{GROUP_A_NAME}]")]
+                        messages=[video_msg, TextMessage(text=f"[{GROUP_A_NAME}]")]
                     )
                 )
 
