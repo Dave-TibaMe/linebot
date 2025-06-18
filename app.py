@@ -45,7 +45,15 @@ def upload_to_imgur(img_bytes):
     files = {"image": img_bytes}
     resp = requests.post(IMGUR_UPLOAD_URL, headers=headers, files=files)
     data = resp.json()
-    return data["data"]["link"] if data["success"] else None
+    try:
+        return data["data"]["link"] if data.get("success") else None
+    except KeyError as e:
+        print(f"錯誤：{e}")
+        # 進一步處理錯誤，例如檢查 API 回應的狀態碼
+        if "status" in data and data["status"] != 200:
+            print(f"狀態碼錯誤：{data['status']}")
+        return None
+    
 
 
 @app.route("/callback", methods=['POST'])
