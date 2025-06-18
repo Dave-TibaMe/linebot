@@ -7,6 +7,7 @@ import mimetypes
 from flask import Flask, request, abort, send_from_directory
 
 from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError, ApiException
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
