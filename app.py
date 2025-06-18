@@ -82,16 +82,8 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         api = MessagingApi(api_client)
 
-        text = f'isinstance(event.message, ImageMessageContent):{isinstance(event.message, ImageMessageContent)}'
-        api.push_message_with_http_info(
-            PushMessageRequest(
-                to=GROUP_B,
-                messages=[TextMessage(text=text)]
-            )
-        )
-"""
         if isinstance(event.message, TextMessageContent):
-            text = event.source.group_id #f"[{GROUP_A_NAME}] {event.message.text}"
+            text = f"[{GROUP_A_NAME}] {event.message.text}"
             api.push_message_with_http_info(
                 PushMessageRequest(
                     to=GROUP_B,
@@ -107,6 +99,18 @@ def handle_message(event):
                 "Content-Type": "application/octet-stream"
             }
             response = requests.get(image_url, headers=headers)
+
+            #test
+            text1 = image_url 
+            text1 += str(response.status_code)
+            api.push_message_with_http_info(
+                PushMessageRequest(
+                    to=GROUP_B,
+                    messages=[TextMessage(text=text1)]
+                )
+            )
+
+
             if response.status_code == 200:
                 content = response.content
                 # 將內容上傳到 Imgur
@@ -145,7 +149,7 @@ def handle_message(event):
                         )
                     )
 
-"""
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render 用 PORT，預設 5000
