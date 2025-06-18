@@ -74,8 +74,8 @@ def callback():
 @handler.add(MessageEvent)
 def handle_message(event):
 
-    if event.source.type != "group" or event.source.group_id != GROUP_A:
-        return
+    #if event.source.type != "group" or event.source.group_id != GROUP_A:
+    #    return
 
     with ApiClient(configuration) as api_client:
         api = MessagingApi(api_client)
