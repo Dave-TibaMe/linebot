@@ -35,7 +35,7 @@ configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN"
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
 GROUP_A = os.getenv("GROUP_ID_A_LEESISTERS", 'C7688c1f2bc678001d3c49d77aef1e888')
-GROUP_B = os.getenv("GROUP_ID_B_ELSA_ANNA", 'C588382cd48e689885e3f9fc5feae4f90')
+GROUP_B_ID = os.getenv("GROUP_ID_B_ELSA_ANNA", 'C588382cd48e689885e3f9fc5feae4f90')
 GROUP_A_NAME = os.getenv("GROUP_A_NAME", "LeeSisters")
 
 # <<< 修改：修正 DEFAULT_VIDEO_PREVIEW_IMAGE_URL 的設定方式和預設值 >>>
@@ -96,10 +96,10 @@ def handle_message(event):
 
         if isinstance(event.message, TextMessageContent):
             text_to_send = f"{group_a_display_name} {event.message.text}".strip()
-            logging.info(f"轉發文字訊息至 {GROUP_B}: {text_to_send}")
+            logging.info(f"轉發文字訊息至 {GROUGROUP_B_IDP_B}: {text_to_send}")
             api.push_message_with_http_info(
                 PushMessageRequest(
-                    to=GROUP_B,
+                    to=GROUP_B_ID,
                     messages=[TextMessage(text=text_to_send)]
                 )
             )
@@ -165,7 +165,7 @@ def handle_message(event):
                     public_image_url = f"{APP_BASE_URL.rstrip('/')}/{TEMP_IMAGE_DIR_NAME}/{unique_filename}"
                     logging.info(f"產生公開圖片 URL: {public_image_url}")
 
-                    # 4. 建立並發送 ImageMessage 到 GROUP_B
+                    # 4. 建立並發送 ImageMessage 到 GROUP_B_ID
                     image_msg_to_forward = ImageMessage(
                         original_content_url=public_image_url,
                         preview_image_url=public_image_url
