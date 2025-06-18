@@ -11,7 +11,6 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError  # 用於 Webhook 簽名驗證
 from linebot.v3.messaging.exceptions import ApiException # 用於 Messaging API 呼叫錯誤
 from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.blob import MessagingApiBlob, MessagingApiBlobApiException
 
 from linebot.v3.messaging import (
     Configuration,
@@ -97,19 +96,15 @@ def handle_message(event):
         return
 
     with ApiClient(configuration) as api_client:
-        api = MessagingApi(api_client)
+        line_bot_api = MessagingApi(api_client)
         group_a_display_name = f"[{GROUP_A_NAME}]" if GROUP_A_NAME else ""
 
-        messaging_api_blob = MessagingApiBlob(api_client)
-
-
-
-
+ 
 
         if isinstance(event.message, TextMessageContent):
             text_to_send = f"{group_a_display_name} {event.message.text}".strip()
-            logging.info(f"轉發文字訊息至 {GROUGROUP_B_IDP_B}: {text_to_send}")
-            api.push_message_with_http_info(
+            logging.info(f"轉發文字訊息至 {GROUP_B_ID}: {text_to_send}")
+            line_bot_api.push_message_with_http_info(
                 PushMessageRequest(
                     to=GROUP_B_ID,
                     messages=[TextMessage(text=text_to_send)]
@@ -123,7 +118,7 @@ def handle_message(event):
             if not APP_BASE_URL:
                 logging.error("APP_BASE_URL 未設定，無法處理圖片轉發。")
                 try: # 嘗試通知來源群組
-                    api.push_message_with_http_info(
+                    line_bot_api.push_message_with_http_info(
                         PushMessageRequest(
                             to=event.source.group_id,
                             messages=[TextMessage(text="[系統通知] 圖片轉發功能因伺服器設定問題暫停。")]
@@ -134,110 +129,33 @@ def handle_message(event):
                 return
 
             filepath = None # 初始化檔案路徑變數，用於 finally 中的刪除
+            
             try:
-                # 1. 下載圖片內容 (使用 v3 的正確方法)
-                logging.debug(f"準備下載圖片內容: {message_id}")
-                
-                api_response = api.get_message_content_with_http_info(message_id=message_id)
-
-                
-                # 使用 MessagingApiBlob 的 get_message_content 方法
-                # 這個方法會直接返回圖片的 bytes 內容
-                message_content_bytes = messaging_api_blob.get_message_content(message_id=message_id)
-
-                file_name = f"{message_id}.jpg" # 假設是 jpg，您可能需要更複雜的邏輯判斷副檔名
-                file_path = os.path.join(temp_image_folder, file_name)
-
+                # --- 使用 MessagingApi 的 get_message_content 方法 ---
+                # 這個方法返回一個 file-like object (bytes stream)
+                message_content_stream = line_bot_api.get_message_content(message_id=message_id) # 或者 api.get_message_content(...)
+    
+                file_name = f"{message_id}.jpg" # 假設是 jpg
+                file_path = os.path.join(TEMP_IMAGE_DIR_NAME, file_name)
+    
                 with open(file_path, 'wb') as fd:
-                    fd.write(message_content_bytes) # 直接將 bytes 寫入檔案
-
-                logger.info(f"圖片已儲存: {file_path}")
-
+                    for chunk in message_content_stream: # 迭代讀取 stream 中的數據塊
+                        fd.write(chunk)
+                # 或者，如果內容不大，可以一次性讀取 (但不推薦用於大檔案)
+                # content_bytes = message_content_stream.read()
+                # with open(file_path, 'wb') as fd:
+                #     fd.write(content_bytes)
+    
+                logging.info(f"圖片已儲存: {file_path}")
+    
                 # ... 接下來您可以處理儲存下來的圖片 file_path ...
-
-            except MessagingApiBlobApiException as e:
-                logger.error(f"獲取圖片內容時發生 LINE Blob API 錯誤: status={e.status}, reason={e.reason}, body={e.body}")
+    
+            except ApiException as e: # 捕獲來自 MessagingApi 的錯誤
+                logging.error(f"獲取圖片內容時發生 LINE API 錯誤: status={e.status}, reason={e.reason}, body={e.body}")
                 # 根據需要處理錯誤，例如回覆錯誤訊息給用戶
             except Exception as e:
-                logger.error(f"處理圖片訊息 {message_id} 時發生未預期錯誤: {e}", exc_info=True) # exc_info=True 會記錄完整的 traceback
-                # 根據需要處理錯誤
-
-
-                if message_content_bytes:
-                    if not mimetypes.inited:
-                        mimetypes.init() # 初始化 mimetypes，如果還沒的話
-
-                    extension = mimetypes.guess_extension(content_type_header, strict=False)
-                    if not extension:
-                        logging.warning(f"無法從 Content-Type '{content_type_header}' 推斷副檔名，預設為 .jpg")
-                        extension = ".jpg"
-                    # 確保副檔名以 '.' 開頭
-                    if not extension.startswith('.'):
-                        extension = '.' + extension
-
-                    unique_filename = f"{uuid.uuid4()}{extension}"
-                    filepath = os.path.join(TEMP_IMAGE_DIR_PATH, unique_filename)
-
-                    # 2. 儲存圖片到臨時檔案
-                    with open(filepath, "wb") as f:
-                        f.write(message_content_bytes)
-                    logging.info(f"圖片已臨時儲存於: {filepath}")
-
-                    # 3. 產生公開 URL
-                    public_image_url = f"{APP_BASE_URL.rstrip('/')}/{TEMP_IMAGE_DIR_NAME}/{unique_filename}"
-                    logging.info(f"產生公開圖片 URL: {public_image_url}")
-
-                    # 4. 建立並發送 ImageMessage 到 GROUP_B_ID
-                    image_msg_to_forward = ImageMessage(
-                        original_content_url=public_image_url,
-                        preview_image_url=public_image_url
-                    )
-
-                    messages_to_send = [image_msg_to_forward]
-                    if GROUP_A_DISPLAY_NAME: # 如果設定了來源群組顯示名稱，則加上
-                        text_label_msg = TextMessage(text=f"圖片來自: {GROUP_A_DISPLAY_NAME}")
-                        messages_to_send.append(text_label_msg)
-
-
-                    logging.info(f"準備轉發圖片訊息至群組 {GROUP_B_ID}")
-                    api.push_message_with_http_info(
-                        PushMessageRequest(
-                            to=GROUP_B_ID,
-                            messages=messages_to_send
-                        )
-                    )
-                    logging.info(f"圖片訊息已成功轉發至群組 {GROUP_B_ID}")
-
-                else: # message_content_bytes 為空 (理論上如果 status_code 200 應該有內容)
-                    logging.error(f"下載後圖片內容為空，訊息 ID: {message_id}")
-                    # api.reply_message_with_http_info(...)
-
-            except ApiException as e:
-                logging.error(f"LINE API 操作失敗 (圖片處理: {message_id}): {e.status} {e.reason} {e.body}", exc_info=True)
-                # 根據錯誤類型決定是否回覆
-                # if e.status == 401: # Unauthorized
-                #     logging.error("LINE API 認證失敗，請檢查 Channel Access Token。")
-                # elif e.status == 400: # Bad Request
-                #     logging.error(f"LINE API 請求錯誤: {e.body}")
-                # api.reply_message_with_http_info(...)
-            except FileNotFoundError: # 如果 TEMP_IMAGE_DIR_PATH 突然消失 (不太可能，但以防萬一)
-                logging.error(f"臨時圖片目錄 {TEMP_IMAGE_DIR_PATH} 不存在，無法儲存圖片。", exc_info=True)
-            except IOError as e_io:
-                logging.error(f"儲存圖片 {filepath} 時發生 IO 錯誤: {e_io}", exc_info=True)
-            except Exception as e:
                 logging.error(f"處理圖片訊息 {message_id} 時發生未預期錯誤: {e}", exc_info=True)
-                # api.reply_message_with_http_info(...)
-            finally:
-                # 在處理完畢後 (無論成功或失敗)，嘗試刪除臨時檔案
-                if filepath and os.path.exists(filepath):
-                    try:
-                        os.remove(filepath)
-                        logging.info(f"已刪除臨時圖片檔案: {filepath}")
-                    except OSError as e_remove:
-                        # 如果刪除失敗，記錄錯誤但不要讓整個請求失敗
-                        logging.error(f"刪除臨時圖片檔案 {filepath} 失敗: {e_remove}", exc_info=True)
-                elif filepath: # filepath 有值但檔案不存在 (可能在儲存前就出錯，或已被其他程序移除)
-                    logging.warning(f"嘗試刪除臨時檔案 {filepath}，但該檔案不存在。")
+                # 根據需要處理錯誤
 
         elif isinstance(event.message, VideoMessageContent):
             message_id = event.message.id
