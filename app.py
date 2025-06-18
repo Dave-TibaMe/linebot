@@ -1,35 +1,3 @@
-import sys
-print(f"--- Python version: {sys.version} ---") # 打印 Python 版本
-print(f"--- Python executable: {sys.executable} ---") # 打印 Python 解釋器路徑
-print(f"--- Python sys.path: {sys.path} ---") # 打印 Python 模組搜尋路徑
-
-try:
-    print("--- Attempting to import linebot to check version and path ---")
-    import linebot
-    version_to_print = "N/A"
-    if hasattr(linebot, '__version__'):
-        version_to_print = linebot.__version__
-    elif hasattr(linebot, 'VERSION'): # 較舊版本可能用這個
-        version_to_print = linebot.VERSION
-    print(f"--- Detected line-bot-sdk version: {version_to_print} ---") # 打印偵測到的版本
-
-    # 打印 linebot 模組的實際路徑
-    print(f"--- Path for linebot module: {linebot.__file__} ---")
-
-    print("--- Attempting to import linebot.v3.exceptions to check its path and contents ---")
-    import linebot.v3.exceptions
-    print(f"--- Path for linebot.v3.exceptions module: {linebot.v3.exceptions.__file__} ---") # 打印 exceptions 模組路徑
-
-    # 嘗試列出 exceptions 模組中所有可用的名稱
-    print(f"--- Contents of linebot.v3.exceptions: {dir(linebot.v3.exceptions)} ---")
-
-except ImportError as e_check:
-    print(f"--- ERROR during pre-check import (linebot or linebot.v3.exceptions): {e_check} ---")
-except Exception as e_generic_check:
-    print(f"--- GENERIC ERROR during pre-check: {e_generic_check} ---")
-
-print("--- Now attempting the original import from app.py line 10 ---")
-
 
 import os
 import requests # requests 模組在目前版本中並未直接使用於核心轉發邏輯 (除了被註解的 Imgur)
@@ -43,6 +11,8 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError  # 用於 Webhook 簽名驗證
 from linebot.v3.messaging.exceptions import ApiException # 用於 Messaging API 呼叫錯誤
 from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.blob import MessagingApiBlob, MessagingApiBlobApiException
+
 from linebot.v3.messaging import (
     Configuration,
     ApiClient,
@@ -92,6 +62,7 @@ APP_BASE_URL = os.getenv("APP_BASE_URL")
 if not APP_BASE_URL:
     logging.warning("環境變數 APP_BASE_URL 未設定。圖片轉發功能可能無法正常運作，因為無法產生公開的圖片 URL。")
 
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
@@ -129,6 +100,12 @@ def handle_message(event):
         api = MessagingApi(api_client)
         group_a_display_name = f"[{GROUP_A_NAME}]" if GROUP_A_NAME else ""
 
+        messaging_api_blob = MessagingApiBlob(api_client)
+
+
+
+
+
         if isinstance(event.message, TextMessageContent):
             text_to_send = f"{group_a_display_name} {event.message.text}".strip()
             logging.info(f"轉發文字訊息至 {GROUGROUP_B_IDP_B}: {text_to_send}")
@@ -160,20 +137,30 @@ def handle_message(event):
             try:
                 # 1. 下載圖片內容 (使用 v3 的正確方法)
                 logging.debug(f"準備下載圖片內容: {message_id}")
+                
                 api_response = api.get_message_content_with_http_info(message_id=message_id)
-                # api_response.data 包含 bytes
-                # api_response.headers 包含 headers
-                # api_response.status_code 包含狀態碼
 
-                if api_response.status_code == 200:
-                    message_content_bytes = api_response.data
-                    content_type_header = api_response.headers.get('Content-Type', 'image/jpeg') # 預設為 jpeg
-                    logging.debug(f"圖片內容下載成功，Content-Type: {content_type_header}, 大小: {len(message_content_bytes)} bytes")
-                else:
-                    logging.error(f"下載圖片內容失敗，狀態碼: {api_response.status_code}, 訊息 ID: {message_id}")
-                    # 根據需要回覆錯誤訊息
-                    # api.reply_message_with_http_info(...)
-                    return
+                
+                # 使用 MessagingApiBlob 的 get_message_content 方法
+                # 這個方法會直接返回圖片的 bytes 內容
+                message_content_bytes = messaging_api_blob.get_message_content(message_id=message_id)
+
+                file_name = f"{message_id}.jpg" # 假設是 jpg，您可能需要更複雜的邏輯判斷副檔名
+                file_path = os.path.join(temp_image_folder, file_name)
+
+                with open(file_path, 'wb') as fd:
+                    fd.write(message_content_bytes) # 直接將 bytes 寫入檔案
+
+                logger.info(f"圖片已儲存: {file_path}")
+
+                # ... 接下來您可以處理儲存下來的圖片 file_path ...
+
+            except MessagingApiBlobApiException as e:
+                logger.error(f"獲取圖片內容時發生 LINE Blob API 錯誤: status={e.status}, reason={e.reason}, body={e.body}")
+                # 根據需要處理錯誤，例如回覆錯誤訊息給用戶
+            except Exception as e:
+                logger.error(f"處理圖片訊息 {message_id} 時發生未預期錯誤: {e}", exc_info=True) # exc_info=True 會記錄完整的 traceback
+                # 根據需要處理錯誤
 
 
                 if message_content_bytes:
