@@ -40,8 +40,8 @@ import mimetypes
 from flask import Flask, request, abort, send_from_directory
 
 from linebot.v3 import WebhookHandler
-#from linebot.v3.exceptions import InvalidSignatureError, ApiException
-from linebot.v3.exceptions import InvalidSignatureError, LineBotApiError
+from linebot.v3.exceptions import InvalidSignatureError  # 用於 Webhook 簽名驗證
+from linebot.v3.messaging.exceptions import ApiException # 用於 Messaging API 呼叫錯誤
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
