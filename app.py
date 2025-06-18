@@ -10,13 +10,16 @@ from linebot.v3.messaging import (
     Configuration,
     ApiClient,
     MessagingApi,
-    ReplyMessageRequest,
     TextMessage,
     ImageMessage,
     VideoMessage,
-    ImageMessageContent, 
-    VideoMessageContent,
     PushMessageRequest
+)
+from linebot.v3.webhooks import (
+    MessageEvent,
+    TextMessageContent,
+    ImageMessageContent,
+    VideoMessageContent
 )
 
 # 讀取環境變數
