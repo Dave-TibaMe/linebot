@@ -100,21 +100,24 @@ def handle_message(event):
             }
             response = requests.get(image_url, headers=headers)
 
-            #test
-            text1 = image_url 
-            text1 += str(response.status_code)
-            api.push_message_with_http_info(
-                PushMessageRequest(
-                    to=GROUP_B,
-                    messages=[TextMessage(text=text1)]
-                )
-            )
+            
 
 
             if response.status_code == 200:
                 content = response.content
                 # 將內容上傳到 Imgur
                 url = upload_to_imgur(content)
+
+                #test
+                text1 = url
+                api.push_message_with_http_info(
+                    PushMessageRequest(
+                        to=GROUP_B,
+                        messages=[TextMessage(text=text1)]
+                    )
+                )
+
+
                 if url:
                     image_msg = ImageMessage(
                         original_content_url=url,
