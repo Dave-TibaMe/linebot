@@ -36,8 +36,8 @@ IMGUR_UPLOAD_URL = "https://api.imgur.com/3/image"
 
 #GROUP_A = os.getenv("GROUP_ID_A_LEESISTERS")
 #GROUP_B = os.getenv("GROUP_ID_B_ELSA_ANNA")
-GROUP_A = 'C7688c1f2bc678001d3c49d77aef1e888'
-GROUP_B = 'C588382cd48e689885e3f9fc5feae4f90'
+GROUP_A = 'C7688c1f2bc678001d3c49d77aef1e888' #Davis & Zoe - Education
+GROUP_B = 'C588382cd48e689885e3f9fc5feae4f90' #Davis & Zoe - 家庭教育
 
 #GROUP_B = 'C8165f7f0ac4ddd169e8ae1dbba6fd2d8' #奕涵詠涵生活大小事
 GROUP_A_NAME = os.getenv("GROUP_A_NAME")
@@ -82,7 +82,7 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         api = MessagingApi(api_client)
 
-        text = isinstance(event.message, ImageMessageContent)
+        text = f'isinstance(event.message, ImageMessageContent):{isinstance(event.message, ImageMessageContent)}'
         api.push_message_with_http_info(
             PushMessageRequest(
                 to=GROUP_B,
