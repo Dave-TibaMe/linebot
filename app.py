@@ -25,8 +25,11 @@ app = Flask(__name__)
 configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
-GROUP_A = os.getenv("GROUP_ID_A_LEESISTERS")
-GROUP_B = os.getenv("GROUP_ID_B_ELSA_ANNA")
+#GROUP_A = os.getenv("GROUP_ID_A_LEESISTERS")
+#GROUP_B = os.getenv("GROUP_ID_B_ELSA_ANNA")
+GROUP_A = 'C7688c1f2bc678001d3c49d77aef1e888'
+GROUP_B = 'C8165f7f0ac4ddd169e8ae1dbba6fd2d8'
+
 
 @app.route("/callback", methods=['POST'])
 def callback():
