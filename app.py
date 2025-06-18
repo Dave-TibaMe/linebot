@@ -35,7 +35,7 @@ IMGUR_UPLOAD_URL = "https://api.imgur.com/3/image"
 #GROUP_B = os.getenv("GROUP_ID_B_ELSA_ANNA")
 GROUP_A = 'C7688c1f2bc678001d3c49d77aef1e888'
 GROUP_B = 'C8165f7f0ac4ddd169e8ae1dbba6fd2d8'
-GROUP_A_NAME = '李氏姐妹'
+GROUP_A_NAME = os.getenv("GROUP_A_NAME")
 
 def upload_to_imgur(img_bytes):
     headers = {"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"}
@@ -69,7 +69,7 @@ def handle_message(event):
         api = MessagingApi(api_client)
 
         if isinstance(event.message, TextMessageContent):
-            text = f"[{GROUP_A_NAME}}] {event.message.text}"
+            text = f"[{GROUP_A_NAME}] {event.message.text}"
             api.push_message_with_http_info(
                 PushMessageRequest(
                     to=GROUP_B,
@@ -88,7 +88,7 @@ def handle_message(event):
                 api.push_message_with_http_info(
                     PushMessageRequest(
                         to=GROUP_B,
-                        messages=[image_msg, TextMessage(text="[{GROUP_A_NAME}]")]
+                        messages=[image_msg, TextMessage(text=f"[{GROUP_A_NAME}]")]
                     )
                 )
 
