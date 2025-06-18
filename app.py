@@ -1,3 +1,36 @@
+import sys
+print(f"--- Python version: {sys.version} ---") # 打印 Python 版本
+print(f"--- Python executable: {sys.executable} ---") # 打印 Python 解釋器路徑
+print(f"--- Python sys.path: {sys.path} ---") # 打印 Python 模組搜尋路徑
+
+try:
+    print("--- Attempting to import linebot to check version and path ---")
+    import linebot
+    version_to_print = "N/A"
+    if hasattr(linebot, '__version__'):
+        version_to_print = linebot.__version__
+    elif hasattr(linebot, 'VERSION'): # 較舊版本可能用這個
+        version_to_print = linebot.VERSION
+    print(f"--- Detected line-bot-sdk version: {version_to_print} ---") # 打印偵測到的版本
+
+    # 打印 linebot 模組的實際路徑
+    print(f"--- Path for linebot module: {linebot.__file__} ---")
+
+    print("--- Attempting to import linebot.v3.exceptions to check its path and contents ---")
+    import linebot.v3.exceptions
+    print(f"--- Path for linebot.v3.exceptions module: {linebot.v3.exceptions.__file__} ---") # 打印 exceptions 模組路徑
+
+    # 嘗試列出 exceptions 模組中所有可用的名稱
+    print(f"--- Contents of linebot.v3.exceptions: {dir(linebot.v3.exceptions)} ---")
+
+except ImportError as e_check:
+    print(f"--- ERROR during pre-check import (linebot or linebot.v3.exceptions): {e_check} ---")
+except Exception as e_generic_check:
+    print(f"--- GENERIC ERROR during pre-check: {e_generic_check} ---")
+
+print("--- Now attempting the original import from app.py line 10 ---")
+
+
 import os
 import requests # requests 模組在目前版本中並未直接使用於核心轉發邏輯 (除了被註解的 Imgur)
 import time   # time 模組在目前版本中並未直接使用 (除了被註解的 Imgur)
