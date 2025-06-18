@@ -79,36 +79,53 @@ def handle_message(event):
                     messages=[TextMessage(text=text)]
                 )
             )
-
+                
         elif isinstance(event.message, ImageMessageContent):
-            content = api.get_message_content(message_id=event.message.id).read()
-            url = upload_to_imgur(content)
-            if url:
-                image_msg = ImageMessage(
-                    original_content_url=url,
-                    preview_image_url=url
-                )
-                api.push_message_with_http_info(
-                    PushMessageRequest(
-                        to=GROUP_B,
-                        messages=[image_msg, TextMessage(text=f"[{GROUP_A_NAME}]")]
+            # 下載圖片內容
+            image_url = f"https://api-data.line.me/v2/bot/message/{event.message.id}/content"
+            headers = {
+                "Authorization": f"Bearer {os.getenv('LINE_CHANNEL_ACCESS_TOKEN')}",
+                "Content-Type": "application/octet-stream"
+            }
+            response = requests.get(image_url, headers=headers)
+            if response.status_code == 200:
+                content = response.content
+                # 將內容上傳到 Imgur
+                url = upload_to_imgur(content)
+                if url:
+                    image_msg = ImageMessage(
+                        original_content_url=url,
+                        preview_image_url=url
                     )
-                )
+                    api.push_message_with_http_info(
+                        PushMessageRequest(
+                            to=GROUP_B,
+                            messages=[image_msg, TextMessage(text=f"[{GROUP_A_NAME}]")]
+                        )
+                    )
 
         elif isinstance(event.message, VideoMessageContent):
-            content = api.get_message_content(message_id=event.message.id).read()
-            url = upload_to_imgur(content)
-            if url:
-                video_msg = VideoMessage(
-                    original_content_url=url,
-                    preview_image_url=url
-                )
-                api.push_message_with_http_info(
-                    PushMessageRequest(
-                        to=GROUP_B,
-                        messages=[video_msg, TextMessage(text=f"[{GROUP_A_NAME}]")]
+            video_url = f"https://api-data.line.me/v2/bot/message/{event.message.id}/content"
+            headers = {
+                "Authorization": f"Bearer {os.getenv('LINE_CHANNEL_ACCESS_TOKEN')}"
+            }
+            response = requests.get(video_url, headers=headers)
+            if response.status_code == 200:
+                content = response.content
+                # 上傳到 Imgur（需確認 Imgur 是否支援影片上傳）
+                url = upload_to_imgur(content)
+                if url:
+                    video_msg = VideoMessage(
+                        original_content_url=url,
+                        preview_image_url=url
                     )
-                )
+                    api.push_message_with_http_info(
+                        PushMessageRequest(
+                            to=GROUP_B,
+                            messages=[video_msg, TextMessage(text=f"[{GROUP_A_NAME}]")]
+                        )
+                    )
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render 用 PORT，預設 5000
