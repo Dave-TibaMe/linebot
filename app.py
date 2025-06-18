@@ -73,6 +73,7 @@ def callback():
 
 @handler.add(MessageEvent)
 def handle_message(event):
+
     if event.source.type != "group" or event.source.group_id != GROUP_A:
         return
 
@@ -80,7 +81,7 @@ def handle_message(event):
         api = MessagingApi(api_client)
 
         if isinstance(event.message, TextMessageContent):
-            text = f"[{GROUP_A_NAME}] {event.message.text}"
+            text = event.source.group_id #f"[{GROUP_A_NAME}] {event.message.text}"
             api.push_message_with_http_info(
                 PushMessageRequest(
                     to=GROUP_B,
