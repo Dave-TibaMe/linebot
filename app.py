@@ -68,9 +68,9 @@ def upload_to_imgur(img_bytes, max_retries=5):
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers['X-Line-Signature']
-    body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
+    signature = request.headers.get('X-Line-Signature', '')
+    body = request.get_data(as_text=False)  # 建議用 as_text=False 或 request.data
+    app.logger.info("Request body: " + body.decode('utf-8', errors='replace'))
 
     try:
         handler.handle(body, signature)
