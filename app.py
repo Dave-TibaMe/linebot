@@ -42,20 +42,28 @@ GROUP_B = 'C588382cd48e689885e3f9fc5feae4f90' #Davis & Zoe - 家庭教育
 #GROUP_B = 'C8165f7f0ac4ddd169e8ae1dbba6fd2d8' #奕涵詠涵生活大小事
 GROUP_A_NAME = os.getenv("GROUP_A_NAME")
 
-def upload_to_imgur(img_bytes):
+def upload_to_imgur(img_bytes, max_retries=5):
     headers = {"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"}
     files = {"image": img_bytes}
-    resp = requests.post(IMGUR_UPLOAD_URL, headers=headers, files=files)
-    data = resp.json()
-    try:
-        return data["data"]["link"] if data.get("success") else None
-    except KeyError as e:
-        print(f"錯誤：{e}")
-        # 進一步處理錯誤，例如檢查 API 回應的狀態碼
-        if "status" in data and data["status"] != 200:
-            print(f"狀態碼錯誤：{data['status']}")
-        return None
+    retries = 0
     
+    while retries < max_retries:
+        resp = requests.post(IMGUR_UPLOAD_URL, headers=headers, files=files)
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            try:
+                return data["data"]["link"] if data.get("success") else None
+            except KeyError as e:
+                print(f"錯誤：{e}")
+                return None
+        else:
+            print(f"上傳失敗，狀態碼：{resp.status_code}，重試中...")
+            retries += 1
+            time.sleep(1)  # 等待 1 秒後重試
+            
+    print("上傳失敗，已達最大重試次數。")
+    return None
 
 
 @app.route("/callback", methods=['POST'])
